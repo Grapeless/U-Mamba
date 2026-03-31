@@ -1,0 +1,61 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+*.egg-info/
+*.egg
+dist/
+build/
+eggs/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# nnUNet data (large files, not tracked)
+data/nnUNet_raw/
+data/nnUNet_preprocessed/
+data/nnUNet_results/
+data/pretrained/
+
+# Medical image data
+*.nii
+*.nii.gz
+*.nrrd
+*.dcm
+
+# Model checkpoints
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs & misc
+*.log
+*.out
+wandb/
+runs/
+lightning_logs/
+
+# Archives
+*.zip
+*.tar.gz
+*.tar
