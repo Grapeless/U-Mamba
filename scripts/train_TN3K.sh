@@ -1,13 +1,14 @@
 #!/bin/bash
 # Usage:
-#   bash scripts/train_TN3K.sh <nnUNetTrainerUMambaEnc|nnUNetTrainerUMambaBot> [--c]
-# Example:
-#   bash scripts/train_TN3K.sh nnUNetTrainerUMambaEnc        # 从头训练
-#   bash scripts/train_TN3K.sh nnUNetTrainerUMambaEnc --c    # 从检查点继续训练
+#   bash scripts/train_TN3K.sh         # 从头训练
+#   bash scripts/train_TN3K.sh --c     # 从检查点继续训练
 
-MAMBA_MODEL=$1
-RESUME_FLAG=$2
-GPU_ID="0"
+# Fix OMP_NUM_THREADS (autodl sets it to 0, causing libgomp errors)
+export OMP_NUM_THREADS=8
 
-echo "Training ${MAMBA_MODEL} on Dataset705_TN3K..."
-CUDA_VISIBLE_DEVICES=${GPU_ID} nnUNetv2_train 705 2d all -tr ${MAMBA_MODEL} ${RESUME_FLAG}
+# nnUNet env
+export nnUNet_raw="data/nnUNet_raw"
+export nnUNet_preprocessed="data/nnUNet_preprocessed"
+export nnUNet_results="data/nnUNet_results"
+
+CUDA_VISIBLE_DEVICES=0 nnUNetv2_train 705 2d all -tr nnUNetTrainerUMambaEnc $1

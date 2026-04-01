@@ -73,12 +73,15 @@ def maybe_load_checkpoint(nnunet_trainer: nnUNetTrainer, continue_training: bool
         raise RuntimeError('Cannot both continue a training AND load pretrained weights. Pretrained weights can only '
                            'be used at the beginning of the training.')
     if continue_training:
-        expected_checkpoint_file = join(nnunet_trainer.output_folder, 'checkpoint_final.pth')
-        if not isfile(expected_checkpoint_file):
-            expected_checkpoint_file = join(nnunet_trainer.output_folder, 'checkpoint_latest.pth')
-        # special case where --c is used to run a previously aborted validation
+        # Search order matches the checkpoint save order during training:
+        # 1. checkpoint_latest.pth - periodic checkpoint saved every N epochs
+        # 2. checkpoint_best.pth   - saved when best EMA pseudo Dice is achieved
+        # 3. checkpoint_final.pth  - saved at end of training (latest is deleted then)
+        expected_checkpoint_file = join(nnunet_trainer.output_folder, 'checkpoint_latest.pth')
         if not isfile(expected_checkpoint_file):
             expected_checkpoint_file = join(nnunet_trainer.output_folder, 'checkpoint_best.pth')
+        if not isfile(expected_checkpoint_file):
+            expected_checkpoint_file = join(nnunet_trainer.output_folder, 'checkpoint_final.pth')
         if not isfile(expected_checkpoint_file):
             print(f"WARNING: Cannot continue training because there seems to be no checkpoint available to "
                                f"continue from. Starting a new training...")
