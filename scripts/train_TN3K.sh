@@ -16,16 +16,10 @@ CUDA_VISIBLE_DEVICES=${GPU_ID} nnUNetv2_predict \
     -f all \
     -chk "checkpoint_best.pth" &&
 
-echo "Computing dice..."
-python evaluation/eval_2d_DSC.py \
+echo "Evaluating (DSC, IoU, Precision, Recall, HD95)..."
+python evaluation/eval_2d_common.py \
     --gt_path "data/nnUNet_raw/Dataset705_TN3K/labelsTs" \
     --seg_path "${PRED_OUTPUT_PATH}" \
-    --save_path "${EVAL_METRIC_PATH}/metric_DSC.csv" &&
-
-echo "Computing NSD..."
-python evaluation/eval_2d_NSD.py \
-    --gt_path "data/nnUNet_raw/Dataset705_TN3K/labelsTs" \
-    --seg_path "${PRED_OUTPUT_PATH}" \
-    --save_path "${EVAL_METRIC_PATH}/metric_NSD.csv" &&
+    --save_path "${EVAL_METRIC_PATH}/metric_all.csv" &&
 
 echo "Done."
