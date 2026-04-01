@@ -854,9 +854,14 @@ class nnUNetTrainer(object):
         self.save_checkpoint(join(self.output_folder, "checkpoint_final.pth"))
         self.current_epoch += 1
 
-        # now we can delete latest
-        if self.local_rank == 0 and isfile(join(self.output_folder, "checkpoint_latest.pth")):
-            os.remove(join(self.output_folder, "checkpoint_latest.pth"))
+        # now we can delete the last periodic checkpoint (final already saved)
+        if self.local_rank == 0:
+            if hasattr(self, '_last_periodic_checkpoint') and self._last_periodic_checkpoint is not None:
+                if isfile(self._last_periodic_checkpoint):
+                    os.remove(self._last_periodic_checkpoint)
+            # also clean up legacy checkpoint_latest.pth if exists
+            if isfile(join(self.output_folder, "checkpoint_latest.pth")):
+                os.remove(join(self.output_folder, "checkpoint_latest.pth"))
 
         # shut down dataloaders
         old_stdout = sys.stdout
@@ -1041,7 +1046,13 @@ class nnUNetTrainer(object):
         # handling periodic checkpointing
         current_epoch = self.current_epoch
         if (current_epoch + 1) % self.save_every == 0 and current_epoch != (self.num_epochs - 1):
-            self.save_checkpoint(join(self.output_folder, 'checkpoint_latest.pth'))
+            # remove previous periodic checkpoint
+            if hasattr(self, '_last_periodic_checkpoint') and self._last_periodic_checkpoint is not None:
+                if isfile(self._last_periodic_checkpoint):
+                    os.remove(self._last_periodic_checkpoint)
+            new_ckpt = join(self.output_folder, f'checkpoint_epoch_{current_epoch + 1}.pth')
+            self.save_checkpoint(new_ckpt)
+            self._last_periodic_checkpoint = new_ckpt
 
         # handle 'best' checkpointing. ema_fg_dice is computed by the logger and can be accessed like this
         if self._best_ema is None or self.logger.my_fantastic_logging['ema_fg_dice'][-1] > self._best_ema:
