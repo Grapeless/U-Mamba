@@ -54,6 +54,7 @@ data/pretrained/
 wandb/
 runs/
 lightning_logs/
+plan/
 
 # Archives
 *.zip

@@ -3,6 +3,14 @@
 #   bash scripts/eval_TN3K.sh                        # 默认用 checkpoint_best.pth
 #   bash scripts/eval_TN3K.sh checkpoint_final.pth   # 指定 checkpoint
 
+# Fix OMP_NUM_THREADS (autodl sets it to 0, causing libgomp errors)
+export OMP_NUM_THREADS=8
+
+# nnUNet env
+export nnUNet_raw="data/nnUNet_raw"
+export nnUNet_preprocessed="data/nnUNet_preprocessed"
+export nnUNet_results="data/nnUNet_results"
+
 CHECKPOINT=${1:-"checkpoint_best.pth"}
 RESULT_DIR="data/nnUNet_results/Dataset705_TN3K/nnUNetTrainerUMambaEnc__nnUNetPlans__2d"
 

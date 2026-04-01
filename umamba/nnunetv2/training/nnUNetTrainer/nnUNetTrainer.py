@@ -183,6 +183,11 @@ class nnUNetTrainer(object):
         self.save_every = 50
         self.disable_checkpointing = False
 
+        ### early stopping
+        self.early_stop_patience = 50  # stop after N epochs without EMA pseudo Dice improvement
+        self._early_stop_counter = 0
+        self._early_stop_triggered = False
+
         ## DDP batch size and oversampling can differ between workers and needs adaptation
         # we need to change the batch size in DDP because we don't use any of those distributed samplers
         self._set_batch_size_and_oversample()
@@ -1059,6 +1064,14 @@ class nnUNetTrainer(object):
             self._best_ema = self.logger.my_fantastic_logging['ema_fg_dice'][-1]
             self.print_to_log_file(f"Yayy! New best EMA pseudo Dice: {np.round(self._best_ema, decimals=4)}")
             self.save_checkpoint(join(self.output_folder, 'checkpoint_best.pth'))
+            self._early_stop_counter = 0
+        else:
+            self._early_stop_counter += 1
+            if self._early_stop_counter >= self.early_stop_patience:
+                self.print_to_log_file(
+                    f"Early stopping triggered! No improvement in EMA pseudo Dice for "
+                    f"{self.early_stop_patience} epochs. Best EMA: {np.round(self._best_ema, decimals=4)}")
+                self._early_stop_triggered = True
 
         if self.local_rank == 0:
             self.logger.plot_progress_png(self.output_folder)
@@ -1085,6 +1098,7 @@ class nnUNetTrainer(object):
                     'init_args': self.my_init_kwargs,
                     'trainer_name': self.__class__.__name__,
                     'inference_allowed_mirroring_axes': self.inference_allowed_mirroring_axes,
+                    '_early_stop_counter': self._early_stop_counter,
                 }
                 torch.save(checkpoint, filename)
             else:
@@ -1109,6 +1123,7 @@ class nnUNetTrainer(object):
         self.current_epoch = checkpoint['current_epoch']
         self.logger.load_checkpoint(checkpoint['logging'])
         self._best_ema = checkpoint['_best_ema']
+        self._early_stop_counter = checkpoint.get('_early_stop_counter', 0)
         self.inference_allowed_mirroring_axes = checkpoint[
             'inference_allowed_mirroring_axes'] if 'inference_allowed_mirroring_axes' in checkpoint.keys() else self.inference_allowed_mirroring_axes
 
@@ -1277,5 +1292,8 @@ class nnUNetTrainer(object):
                 self.on_validation_epoch_end(val_outputs)
 
             self.on_epoch_end()
+
+            if self._early_stop_triggered:
+                break
 
         self.on_train_end()
