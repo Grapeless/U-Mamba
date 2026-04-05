@@ -1,0 +1,32 @@
+#!/bin/bash
+# Usage:
+#   bash scripts/eval_TN3K_BAGD.sh                        # 默认用 checkpoint_best.pth
+#   bash scripts/eval_TN3K_BAGD.sh checkpoint_final.pth   # 指定 checkpoint
+
+# Fix OMP_NUM_THREADS (autodl sets it to 0, causing libgomp errors)
+export OMP_NUM_THREADS=8
+
+# nnUNet env
+export nnUNet_raw="data/nnUNet_raw"
+export nnUNet_preprocessed="data/nnUNet_preprocessed"
+export nnUNet_results="data/nnUNet_results"
+
+CHECKPOINT=${1:-"checkpoint_best.pth"}
+RESULT_DIR="data/nnUNet_results/Dataset705_TN3K/nnUNetTrainerUMambaEnc_BAGD__nnUNetPlans__2d"
+
+echo "Predicting (${CHECKPOINT})..." &&
+CUDA_VISIBLE_DEVICES=0 nnUNetv2_predict \
+    -i "data/nnUNet_raw/Dataset705_TN3K/imagesTs" \
+    -o "${RESULT_DIR}/pred_results" \
+    -d 705 -c 2d -f all \
+    -tr nnUNetTrainerUMambaEnc_BAGD \
+    --disable_tta \
+    -chk "${CHECKPOINT}" &&
+
+echo "Evaluating (DSC, IoU, Precision, Recall, HD95)..."
+python evaluation/eval_2d_common.py \
+    --gt_path "data/nnUNet_raw/Dataset705_TN3K/labelsTs" \
+    --seg_path "${RESULT_DIR}/pred_results" \
+    --save_path "${RESULT_DIR}/metric_all.csv" &&
+
+echo "Done. Results saved to ${RESULT_DIR}/metric_all.csv"
