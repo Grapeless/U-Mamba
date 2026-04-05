@@ -1,4 +1,6 @@
+import glob
 import os
+import re
 import socket
 from typing import Union, Optional
 
@@ -73,12 +75,21 @@ def maybe_load_checkpoint(nnunet_trainer: nnUNetTrainer, continue_training: bool
         raise RuntimeError('Cannot both continue a training AND load pretrained weights. Pretrained weights can only '
                            'be used at the beginning of the training.')
     if continue_training:
-        # Search order matches the checkpoint save order during training:
-        # 1. checkpoint_latest.pth - periodic checkpoint saved every N epochs
+        # Search order for resuming training:
+        # 1. checkpoint_epoch_*.pth - periodic checkpoint (pick the one with highest epoch)
         # 2. checkpoint_best.pth   - saved when best EMA pseudo Dice is achieved
-        # 3. checkpoint_final.pth  - saved at end of training (latest is deleted then)
-        expected_checkpoint_file = join(nnunet_trainer.output_folder, 'checkpoint_latest.pth')
-        if not isfile(expected_checkpoint_file):
+        # 3. checkpoint_final.pth  - saved at end of training
+        expected_checkpoint_file = None
+
+        # find the latest periodic checkpoint by epoch number
+        epoch_ckpts = glob.glob(join(nnunet_trainer.output_folder, 'checkpoint_epoch_*.pth'))
+        if epoch_ckpts:
+            def _extract_epoch(path):
+                m = re.search(r'checkpoint_epoch_(\d+)\.pth$', path)
+                return int(m.group(1)) if m else -1
+            expected_checkpoint_file = max(epoch_ckpts, key=_extract_epoch)
+
+        if expected_checkpoint_file is None or not isfile(expected_checkpoint_file):
             expected_checkpoint_file = join(nnunet_trainer.output_folder, 'checkpoint_best.pth')
         if not isfile(expected_checkpoint_file):
             expected_checkpoint_file = join(nnunet_trainer.output_folder, 'checkpoint_final.pth')

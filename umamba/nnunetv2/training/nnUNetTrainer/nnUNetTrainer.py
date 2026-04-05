@@ -1099,6 +1099,8 @@ class nnUNetTrainer(object):
                     'trainer_name': self.__class__.__name__,
                     'inference_allowed_mirroring_axes': self.inference_allowed_mirroring_axes,
                     '_early_stop_counter': self._early_stop_counter,
+                    '_early_stop_triggered': self._early_stop_triggered,
+                    'log_file': os.path.basename(self.log_file),
                 }
                 torch.save(checkpoint, filename)
             else:
@@ -1124,6 +1126,13 @@ class nnUNetTrainer(object):
         self.logger.load_checkpoint(checkpoint['logging'])
         self._best_ema = checkpoint['_best_ema']
         self._early_stop_counter = checkpoint.get('_early_stop_counter', 0)
+        self._early_stop_triggered = checkpoint.get('_early_stop_triggered', False)
+
+        # restore log file so that resumed training appends to the original log
+        if 'log_file' in checkpoint:
+            self.log_file = join(self.output_folder, checkpoint['log_file'])
+            self.print_to_log_file(
+                "\n============ Training resumed (epoch %d) ============" % self.current_epoch)
         self.inference_allowed_mirroring_axes = checkpoint[
             'inference_allowed_mirroring_axes'] if 'inference_allowed_mirroring_axes' in checkpoint.keys() else self.inference_allowed_mirroring_axes
 
