@@ -45,14 +45,19 @@ class BoundaryLoss(nn.Module):
         self.smooth = smooth
 
     def _dice_loss(self, pred_logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        """Compute Dice loss on boundary maps."""
+        """Compute Dice loss on boundary maps.
+
+        Uses per-sample Dice (sum over spatial dims only, then mean over batch)
+        to avoid fp16 overflow when summing over the entire batch.
+        """
         pred = torch.sigmoid(pred_logits)
         axes = tuple(range(2, pred.ndim))  # spatial dims
-        intersection = (pred * target).sum(dim=axes).sum(dim=1).sum(dim=0)
-        sum_pred = pred.sum(dim=axes).sum(dim=1).sum(dim=0)
-        sum_gt = target.sum(dim=axes).sum(dim=1).sum(dim=0)
+        # Per-sample computation: (B, 1) after spatial sum
+        intersection = (pred * target).sum(dim=axes)
+        sum_pred = pred.sum(dim=axes)
+        sum_gt = target.sum(dim=axes)
         dice = (2 * intersection + self.smooth) / (sum_pred + sum_gt + self.smooth)
-        return 1 - dice
+        return 1 - dice.mean()
 
     def forward(self, pred_logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """
@@ -60,6 +65,9 @@ class BoundaryLoss(nn.Module):
             pred_logits: (B, 1, H, W) raw logits from BoundaryHead
             target: (B, 1, H, W) boundary GT, float {0, 1}
         """
+        # Force fp32 to prevent fp16 overflow in loss computation
+        pred_logits = pred_logits.float()
+        target = target.float()
         bce_loss = self.bce(pred_logits, target)
         dice_loss = self._dice_loss(pred_logits, target)
         return bce_loss + dice_loss

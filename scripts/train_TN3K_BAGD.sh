@@ -5,6 +5,7 @@
 
 # Fix OMP_NUM_THREADS (autodl sets it to 0, causing libgomp errors)
 export OMP_NUM_THREADS=8
+
 # nnUNet env
 export nnUNet_raw="data/nnUNet_raw"
 export nnUNet_preprocessed="data/nnUNet_preprocessed"
