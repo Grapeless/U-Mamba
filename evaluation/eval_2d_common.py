@@ -109,18 +109,31 @@ for name in tqdm(filenames):
     seg_metrics['HD95'].append(round(hd95_mean, 4) if np.isfinite(hd95_mean) else np.inf)
 
 dataframe = pd.DataFrame(seg_metrics)
-dataframe.to_csv(save_path, index=False)
 
 # Summary
 total = len(dataframe)
 hd95_col = dataframe['HD95'].replace(np.inf, np.nan)
 failed = dataframe['DSC'].eq(0.0).sum()
 
+summary_text = (f"Results for {basename(seg_path)} ({total} samples, {failed} failed): "
+                f"DSC: {dataframe['DSC'].mean():.4f}  "
+                f"IoU: {dataframe['IoU'].mean():.4f}  "
+                f"Precision: {dataframe['Precision'].mean():.4f}  "
+                f"Recall: {dataframe['Recall'].mean():.4f}  "
+                f"HD95: {hd95_col.mean():.4f} ({hd95_col.notna().sum()}/{total} finite)")
+
+# Append summary as last row
+summary_row = pd.DataFrame([{
+    'Name': summary_text,
+    'DSC': round(dataframe['DSC'].mean(), 4),
+    'IoU': round(dataframe['IoU'].mean(), 4),
+    'Precision': round(dataframe['Precision'].mean(), 4),
+    'Recall': round(dataframe['Recall'].mean(), 4),
+    'HD95': round(hd95_col.mean(), 4),
+}])
+dataframe = pd.concat([dataframe, summary_row], ignore_index=True)
+dataframe.to_csv(save_path, index=False)
+
 print(20 * '>')
-print(f"Results for {basename(seg_path)} ({total} samples, {failed} failed):")
-print(f"  DSC:       {dataframe['DSC'].mean():.4f}")
-print(f"  IoU:       {dataframe['IoU'].mean():.4f}")
-print(f"  Precision: {dataframe['Precision'].mean():.4f}")
-print(f"  Recall:    {dataframe['Recall'].mean():.4f}")
-print(f"  HD95:      {hd95_col.mean():.4f} ({hd95_col.notna().sum()}/{total} finite)")
+print(summary_text)
 print(20 * '<')
