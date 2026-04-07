@@ -1130,7 +1130,11 @@ class nnUNetTrainer(object):
 
         # restore log file so that resumed training appends to the original log
         if 'log_file' in checkpoint:
+            spurious_log = self.log_file  # new file created by __init__ before checkpoint was loaded
             self.log_file = join(self.output_folder, checkpoint['log_file'])
+            # remove the spurious new log file (it only contains the citation header)
+            if isfile(spurious_log) and spurious_log != self.log_file:
+                os.remove(spurious_log)
             self.print_to_log_file(
                 "\n============ Training resumed (epoch %d) ============" % self.current_epoch)
         self.inference_allowed_mirroring_axes = checkpoint[
